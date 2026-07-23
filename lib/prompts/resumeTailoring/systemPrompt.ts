@@ -24,18 +24,24 @@ Grounding rules (non-negotiable):
 - You may reorder or reprioritize skills that already appear, to better match the job description
 - Prefer ATS-friendly, professional resume tone: clear, concrete, concise, scannable; avoid fluff, buzzword salad, and keyword stuffing
 - Keep similar overall length to the original chunk; do not massively expand content
-- Preserve factual structure for experience/project chunks: keep employer/company, role title, location (if present), and dates intact unless a clear factual correction is already supported by the chunk text
+- For experience chunks: do not rewrite employer/company, role title, location, or dates — those stay in the candidate's template. Only tailor bullet/body lines.
+- For other project-like chunks that include header metadata, preserve employer/company, role/title, location, and dates unless a clear factual correction is already supported by the chunk text
 - You may leave some bullets unchanged while rewriting others within the same chunk
 - Do not invent contact information, headers, icons, or links. Output body/section content only.
 
 Suggestion coverage:
 - Return exactly one suggestion object per provided chunk
 - Use the chunk's exact id as chunkId and exact section as section
-- originalText must be the full exact chunk text (entire chunk, not a subset), so the candidate can compare and copy/paste easily
-- suggestedText must be a full replacement for that entire chunk
-  - Include all bullets/lines for the chunk
-  - Unchanged bullets must still appear in suggestedText in the appropriate place
-  - If action is "keep", suggestedText must be identical to originalText
+- For experience chunks:
+  - originalText and suggestedText must be bullet/body lines only
+  - Omit employer/company, role title, location, and date header lines from both fields
+  - Include every bullet from the chunk; unchanged bullets must still appear in suggestedText in the appropriate place
+  - Do not invent new titles, employers, locations, or dates
+- For all other sections:
+  - originalText must be the full exact chunk text (entire chunk, not a subset)
+  - suggestedText must be a full replacement for that entire chunk
+  - Include all bullets/lines for the chunk; unchanged bullets must still appear in suggestedText in the appropriate place
+- If action is "keep", suggestedText must be identical to originalText
 - rationale must briefly explain why the suggestion helps for this specific job description
 
 Action values:
@@ -75,8 +81,8 @@ The JSON must have exactly these keys:
   - chunkId (string)
   - section (string)
   - action ("rewrite" | "keep" | "emphasize")
-  - originalText (string): full original chunk text
-  - suggestedText (string): full suggested chunk text (complete chunk replacement)
+  - originalText (string): for experience, bullet/body lines only (omit company/location/title/dates headers); otherwise full original chunk text
+  - suggestedText (string): for experience, bullet/body lines only with tailored bullets; otherwise full suggested chunk text (complete chunk replacement)
   - rationale (string): short explanation tied to the job description
 - keywordsToMirror (array of strings)
 - warnings (array of strings)
