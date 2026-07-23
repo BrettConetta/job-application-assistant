@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { TailoredResumeSuggestion } from "../../../lib/schemas/tailoredResume.js";
+import { copyResumeSuggestion } from "../utils/copyResumeSuggestion.js";
 import {
   renderOriginalDiff,
   renderSuggestedDiff,
@@ -28,7 +29,10 @@ export function TailorSuggestionCard({
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(suggestion.suggestedText);
+      await copyResumeSuggestion(
+        suggestion.suggestedText,
+        suggestion.section,
+      );
       setCopyStatus("copied");
       window.setTimeout(() => setCopyStatus("idle"), 2000);
     } catch {
