@@ -22,6 +22,6 @@ ${chunksJson}
 </resume_chunks>
 
 Using only the resume chunks above, produce ATS-friendly tailoring suggestions for this job description.
-Return exactly one suggestion per chunk. For experience chunks, originalText and suggestedText must be bullet/body lines only (omit company, role title, location, and date headers). For all other sections, originalText must be the full chunk text and suggestedText a full chunk replacement (unchanged bullets included).
+Return exactly one suggestion per chunk. For experience chunks, originalText and suggestedText must be bullet/body lines only (omit company, role title, location, and date headers). For projects chunks, originalText and suggestedText must be bullet/body lines only (omit project name, project type, tech stack, and year headers). For all other sections, originalText must be the full chunk text and suggestedText a full chunk replacement (unchanged bullets included).
 Ground every change in the provided chunks only — do not invent experience or assume omitted sections exist.`;
 }

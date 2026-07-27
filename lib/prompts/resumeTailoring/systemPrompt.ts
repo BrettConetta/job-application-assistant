@@ -25,7 +25,8 @@ Grounding rules (non-negotiable):
 - Prefer ATS-friendly, professional resume tone: clear, concrete, concise, scannable; avoid fluff, buzzword salad, and keyword stuffing
 - Keep similar overall length to the original chunk; do not massively expand content
 - For experience chunks: do not rewrite employer/company, role title, location, or dates — those stay in the candidate's template. Only tailor bullet/body lines.
-- For other project-like chunks that include header metadata, preserve employer/company, role/title, location, and dates unless a clear factual correction is already supported by the chunk text
+- For projects chunks: do not rewrite project name, project type, tech stack, or year — those stay in the candidate's template. Only tailor bullet/body lines.
+- For other chunks that include header metadata, preserve employer/company, role/title, location, and dates unless a clear factual correction is already supported by the chunk text
 - You may leave some bullets unchanged while rewriting others within the same chunk
 - Do not invent contact information, headers, icons, or links. Output body/section content only.
 
@@ -37,6 +38,11 @@ Suggestion coverage:
   - Omit employer/company, role title, location, and date header lines from both fields
   - Include every bullet from the chunk; unchanged bullets must still appear in suggestedText in the appropriate place
   - Do not invent new titles, employers, locations, or dates
+- For projects chunks:
+  - originalText and suggestedText must be bullet/body lines only
+  - Omit project name, project type, tech stack, and year header lines from both fields
+  - Include every bullet from the chunk; unchanged bullets must still appear in suggestedText in the appropriate place
+  - Do not invent new project names, project types, tech stacks, or years
 - For all other sections:
   - originalText must be the full exact chunk text (entire chunk, not a subset)
   - suggestedText must be a full replacement for that entire chunk
@@ -81,8 +87,14 @@ The JSON must have exactly these keys:
   - chunkId (string)
   - section (string)
   - action ("rewrite" | "keep" | "emphasize")
-  - originalText (string): for experience, bullet/body lines only (omit company/location/title/dates headers); otherwise full original chunk text
-  - suggestedText (string): for experience, bullet/body lines only with tailored bullets; otherwise full suggested chunk text (complete chunk replacement)
+  - originalText (string)
+    - for experience, bullet/body lines only (omit company/location/title/dates headers)
+    - for projects, bullet/body lines only (omit project name, project type, tech stack, and year headers)
+    - otherwise full original chunk text
+  - suggestedText (string)
+    - for experience, bullet/body lines only with tailored bullets
+    - for projects, bullet/body lines only with tailored bullets
+    - otherwise full suggested chunk text (complete chunk replacement)
   - rationale (string): short explanation tied to the job description
 - keywordsToMirror (array of strings)
 - warnings (array of strings)
