@@ -12,6 +12,7 @@ import {
 import { getAnthropicClient } from "../utils/anthropicClient.js";
 import { parseClaudeResponse } from "../utils/parseAnthropicResponse.js";
 import { parseExperienceChunk } from "../utils/parseExperienceChunk.js";
+import { parseProjectChunk } from "../utils/parseProjectChunk.js";
 import { retrieveResumeChunks } from "./retrieveResumeChunks.js";
 
 export async function tailorResume(
@@ -62,6 +63,14 @@ export async function tailorResume(
             suggestion.experienceContext = parseExperienceChunk(
               relevantChunk.text,
             );
+          }
+        }
+        if (suggestion.section === "projects") {
+          const relevantChunk = chunks.find(
+            (chunk) => chunk.id === suggestion.chunkId,
+          );
+          if (relevantChunk) {
+            suggestion.projectContext = parseProjectChunk(relevantChunk.text);
           }
         }
       });
