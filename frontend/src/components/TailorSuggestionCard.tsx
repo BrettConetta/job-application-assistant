@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { TailoredResumeSuggestion } from "../../../lib/schemas/tailoredResume.js";
+import { copyResumeSuggestion } from "../utils/copyResumeSuggestion.js";
 import {
   renderOriginalDiff,
   renderSuggestedDiff,
@@ -28,7 +29,7 @@ export function TailorSuggestionCard({
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(suggestion.suggestedText);
+      await copyResumeSuggestion(suggestion.suggestedText, suggestion.section);
       setCopyStatus("copied");
       window.setTimeout(() => setCopyStatus("idle"), 2000);
     } catch {
@@ -48,7 +49,10 @@ export function TailorSuggestionCard({
           <span
             className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${ACTION_STYLES[suggestion.action]}`}
           >
-            {suggestion.action}
+            {
+              // capitalize first letter of the action
+              suggestion.action.replace(/^./, (c: string) => c.toUpperCase())
+            }
           </span>
         </div>
         {suggestion.experienceContext && (
@@ -107,15 +111,17 @@ export function TailorSuggestionCard({
           </div>
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => void handleCopy()}
-          className="shrink-0 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
-        >
-          {copyStatus === "copied" ? "Copied!" : "Copy suggested"}
-        </button>
-      </div>
+      {suggestion.action !== "keep" && (
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => void handleCopy()}
+            className="shrink-0 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+          >
+            {copyStatus === "copied" ? "Copied!" : "Copy suggested"}
+          </button>
+        </div>
+      )}
     </article>
   );
 }

@@ -20,6 +20,11 @@ import {
   readStoredResume,
   writeStoredResume,
 } from "../../lib/services/resumeStorageService.js";
+import {
+  isMocksEnabled,
+  readTailorResumeMock,
+  writeTailorResumeMock,
+} from "../../lib/services/tailorResumeMockService.js";
 import { tailorResume } from "../../lib/services/tailorResumeService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -154,6 +159,17 @@ app.post("/api/resume/tailor", async (req: Request, res: Response) => {
       return res.status(400).json({ error: message });
     }
 
+    if (isMocksEnabled()) {
+      const mock = readTailorResumeMock(PROJECT_ROOT);
+      if (mock) {
+        console.log("Returning mocked tailor resume response");
+        return res.json(mock);
+      }
+      console.warn(
+        "MOCKS_ENABLED=true but no tailor resume mock found; calling Claude",
+      );
+    }
+
     const fromRequest = Boolean(parsed.data.resumeText?.trim());
     const resumeText =
       parsed.data.resumeText?.trim() || readStoredResume(PROJECT_ROOT);
@@ -173,6 +189,7 @@ app.post("/api/resume/tailor", async (req: Request, res: Response) => {
       : await indexStoredResume(PROJECT_ROOT);
 
     const result = await tailorResume(parsed.data.jobDescription, resumeIndex);
+    writeTailorResumeMock(PROJECT_ROOT, result);
     return res.json(result);
   } catch (error) {
     console.error("Failed to tailor resume:", error);
