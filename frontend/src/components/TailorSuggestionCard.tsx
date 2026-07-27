@@ -73,6 +73,24 @@ export function TailorSuggestionCard({
             </div>
           </>
         )}
+        {suggestion.projectContext && (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-base font-semibold text-gray-900">
+                {suggestion.projectContext.name}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-sm font-medium text-gray-700">
+                {suggestion.projectContext.projectType} •{" "}
+                {suggestion.projectContext.techStack}
+              </span>
+              <span className="text-xs text-gray-500">
+                {suggestion.projectContext.year}
+              </span>
+            </div>
+          </>
+        )}
       </div>
       <p className="text-sm text-gray-600">{suggestion.rationale}</p>
 

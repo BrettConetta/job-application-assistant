@@ -1,6 +1,5 @@
 import type { ExperienceContext } from "../schemas/tailoredResume.js";
 
-// Prefer exporting these from chunkResume.ts so they stay in sync
 const COMPANY_SEP = /\s•\s/;
 const ROLE_DATES =
   /^(.+?)\s+((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}\s*[–—-]\s+(?:Present|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}))\s*$/i;

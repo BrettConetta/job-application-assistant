@@ -9,6 +9,14 @@ export const ExperienceContextSchema = z.object({
 });
 export type ExperienceContext = z.infer<typeof ExperienceContextSchema>;
 
+export const ProjectContextSchema = z.object({
+  name: z.string().trim(),
+  year: z.string().trim(),
+  projectType: z.string().trim(),
+  techStack: z.string().trim(),
+});
+export type ProjectContext = z.infer<typeof ProjectContextSchema>;
+
 export const TailoredResumeRequestSchema = z.object({
   jobDescription: z.string().trim().min(1, "jobDescription is required"),
   resumeText: z.string().trim().optional(),
@@ -24,6 +32,7 @@ export const TailoredResumeSuggestionSchema = z.object({
   suggestedText: z.string().trim().min(1, "suggestedText is required"), // tailored version; same as original if keep
   rationale: z.string().trim().min(1, "rationale is required"), // short: why this change for this JD
   experienceContext: ExperienceContextSchema.optional(),
+  projectContext: ProjectContextSchema.optional(),
 });
 
 export type TailoredResumeSuggestion = z.infer<
