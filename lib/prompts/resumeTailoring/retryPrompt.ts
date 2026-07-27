@@ -8,5 +8,6 @@ export const TAILOR_RESUME_JSON_RETRY_PROMPT =
   "warnings (array of strings). " +
   "action must be one of: rewrite, keep, emphasize. " +
   "For experience, originalText and suggestedText must be bullet/body lines only (omit company, role title, location, and date headers). " +
+  "For projects, originalText and suggestedText must be bullet/body lines only (omit project name, project type, tech stack, and year headers). " +
   "For all other sections, originalText must be the full original chunk text and suggestedText a full chunk replacement. " +
   "No markdown, no code fences, no extra text.";
