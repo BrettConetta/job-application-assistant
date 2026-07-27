@@ -5,7 +5,8 @@ const LEADING_BULLET = /^\s*(?:[•·●▪◦]\s*|[-*–—]\s+|\d+[.)]\s+)(.*)
 const SKILLS_CATEGORY = /^(.{1,40}?)\s*[–—-]\s+(.+)$/;
 
 /** Body text: force normal weight + near-black so paste doesn't inherit bold blue. */
-const BODY_STYLE = "font-weight:normal;color:#1F1F1F";
+const BODY_STYLE =
+  "font-family:Arial,sans-serif;font-size:11pt;font-weight:normal;color:#595959";
 /** Category labels on the skills resume (bold slate). */
 const CATEGORY_STYLE = "font-weight:bold;color:#4B6A88";
 
@@ -46,27 +47,68 @@ export type FormattedSuggestionClipboard = {
   html: string;
 };
 
+function wrapClipboardHtml(htmlBody: string): string {
+  // StartFragment/EndFragment helps Word treat this as inline paste content.
+  return `<html><body><!--StartFragment-->${htmlBody}<!--EndFragment--></body></html>`;
+}
+
+/**
+ * Normalize suggestion lines: strip leading bullets, no trailing newline.
+ */
+function normalizeSuggestionLines(text: string): string[] {
+  const plain = text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => (line.trim() ? stripLeadingBullet(line).trim() : ""))
+    .join("\n")
+    .replace(/^\n+|\n+$/g, "");
+
+  return plain.length > 0 ? plain.split("\n") : [];
+}
+
+/**
+ * Experience: same merge-into-existing-list shape as skills (div per line, no
+ * ul/li / no character bullets). Color/font set explicitly for Keep Source.
+ */
+function formatExperienceSuggestionForClipboard(
+  text: string,
+): FormattedSuggestionClipboard {
+  const lines = normalizeSuggestionLines(text);
+  const plain = lines.join("\n");
+  const htmlBody = lines
+    .map((line) =>
+      line
+        ? `<div style="${BODY_STYLE}"><span style="${BODY_STYLE}">${escapeHtml(line)}</span></div>`
+        : "<div><br></div>",
+    )
+    .join("");
+
+  return { plain, html: wrapClipboardHtml(htmlBody) };
+}
+
 /**
  * Prepare suggestion text for pasting into an existing Word list.
  *
+ * Skills / default:
  * - Strip leading bullets (avoid double bullets)
  * - No trailing newline (avoids an extra empty bullet)
- * - HTML uses one div per line (not ul/li) so Word maps lines onto existing
- *   list items without nesting or a leftover empty bullet
+ * - HTML uses one div per line (not ul/li)
  * - Explicit span styles so skills don't inherit bold/blue from the selection
+ *
+ * Experience:
+ * - Same div-per-line approach with Arial 11 + #595959
+ * - Leading bullets stripped (no character "•", no <ul>)
  */
 export function formatSuggestionForClipboard(
   text: string,
   section?: string,
 ): FormattedSuggestionClipboard {
-  const plain = text
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => (line.trim() ? stripLeadingBullet(line) : ""))
-    .join("\n")
-    .replace(/^\n+|\n+$/g, "");
+  if (section === "experience") {
+    return formatExperienceSuggestionForClipboard(text);
+  }
 
-  const strippedLines = plain.length > 0 ? plain.split("\n") : [];
+  const strippedLines = normalizeSuggestionLines(text);
+  const plain = strippedLines.join("\n");
   const htmlBody = strippedLines
     .map((line) =>
       line
@@ -75,10 +117,7 @@ export function formatSuggestionForClipboard(
     )
     .join("");
 
-  // StartFragment/EndFragment helps Word treat this as inline paste content.
-  const html = `<html><body><!--StartFragment-->${htmlBody}<!--EndFragment--></body></html>`;
-
-  return { plain, html };
+  return { plain, html: wrapClipboardHtml(htmlBody) };
 }
 
 /** Copy suggestion as text/html + text/plain for Word-friendly paste. */
