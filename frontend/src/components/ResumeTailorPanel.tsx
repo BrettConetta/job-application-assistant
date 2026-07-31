@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { TailoredResumeResponse } from "../../../lib/schemas/tailoredResume.js";
+import { applyResumeSuggestions } from "../../../lib/utils/applyResumeSuggestions.js";
 import { tailorResume } from "../api/tailorResume.js";
 import { stripContactInfo } from "../utils/stripContactInfo.js";
 import { JobDescriptionInput } from "./JobDescriptionInput.js";
 import { ResumeInput, type ResumeSource } from "./ResumeInput.js";
 import { TailorSuggestionCard } from "./TailorSuggestionCard.js";
+import { TailoredResumePreview } from "./TailoredResumePreview.js";
 
 export type ResumeTailorPanelProps = {
   jobDescription: string;
@@ -20,7 +22,11 @@ export type ResumeTailorPanelProps = {
   onSaveStoredResume: (text: string) => Promise<string>;
   onClearStoredResume: () => Promise<void>;
   resumeLoadError: string | null;
+  onUseForCoverLetter: (tailoredResumeText: string) => void;
+  onResultStaleChange: (isStale: boolean) => void;
+  reTailorRequestId: number;
 };
+type ApplyResult = ReturnType<typeof applyResumeSuggestions>;
 
 export function ResumeTailorPanel({
   jobDescription,
@@ -36,10 +42,109 @@ export function ResumeTailorPanel({
   onSaveStoredResume,
   onClearStoredResume,
   resumeLoadError,
+  onUseForCoverLetter,
+  onResultStaleChange,
+  reTailorRequestId,
 }: ResumeTailorPanelProps) {
   const [result, setResult] = useState<TailoredResumeResponse | null>(null);
   const [isTailoring, setIsTailoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resumeUsedForTailor, setResumeUsedForTailor] = useState<string>("");
+  const [checkedChunkIds, setCheckedChunkIds] = useState<string[]>([]);
+  const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
+  const [isResultStale, setIsResultStale] = useState(false);
+  const resultsOverviewRef = useRef<HTMLElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (result) {
+      resultsOverviewRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [result]);
+
+  useEffect(() => {
+    if (applyResult) {
+      previewRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [applyResult?.appliedChunkIds]);
+
+  // Mark results outdated when inputs change; do not depend on `result` so a
+  // successful tailor run is not immediately flagged as stale.
+  useEffect(() => {
+    if (result) {
+      setIsResultStale(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally ignore `result`
+  }, [jobDescription, resumeSource, pastedResume, uploadedResume, storedResume]);
+
+  useEffect(() => {
+    onResultStaleChange(isResultStale);
+  }, [isResultStale, onResultStaleChange]);
+
+  useEffect(() => {
+    return () => onResultStaleChange(false);
+  }, [onResultStaleChange]);
+
+  useEffect(() => {
+    if (reTailorRequestId > 0) {
+      void handleTailor();
+    }
+    // Only react to banner Re-tailor clicks, not handleTailor identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reTailorRequestId]);
+
+  function confirmIfStale(message: string): boolean {
+    if (!isResultStale) return true;
+    return window.confirm(message);
+  }
+
+  function handleCheckboxChange(chunkId: string) {
+    setCheckedChunkIds((previous) =>
+      previous.includes(chunkId)
+        ? previous.filter((id) => id !== chunkId)
+        : [...previous, chunkId],
+    );
+    setApplyResult(null);
+  }
+
+  function handleApply() {
+    const checkedSuggestions =
+      result?.suggestions.filter((suggestion) =>
+        checkedChunkIds.includes(suggestion.chunkId),
+      ) ?? [];
+
+    if (!resumeUsedForTailor || checkedSuggestions.length === 0) return;
+
+    if (
+      !confirmIfStale(
+        "These results are outdated because the job description or resume changed. Apply them anyway?",
+      )
+    ) {
+      return;
+    }
+
+    setApplyResult(
+      applyResumeSuggestions(resumeUsedForTailor, checkedSuggestions),
+    );
+  }
+
+  function handleUseForCoverLetter(tailoredResumeText: string) {
+    if (
+      !confirmIfStale(
+        "These results are outdated because the job description or resume changed. Use this tailored resume for a cover letter anyway?",
+      )
+    ) {
+      return;
+    }
+
+    onUseForCoverLetter(tailoredResumeText);
+  }
 
   const activeResumeText = useMemo(() => {
     if (resumeSource === "stored") {
@@ -54,6 +159,9 @@ export function ResumeTailorPanel({
   async function handleTailor() {
     setError(null);
     setResult(null);
+    setCheckedChunkIds([]);
+    setApplyResult(null);
+    setIsResultStale(false);
 
     if (!jobDescription.trim()) {
       setError("Please paste a job description.");
@@ -82,8 +190,20 @@ export function ResumeTailorPanel({
               resumeText: stripContactInfo(activeResumeText),
             };
 
+      const resumeForThisRun =
+        resumeSource === "stored"
+          ? storedResume
+          : stripContactInfo(activeResumeText);
+
       const tailored = await tailorResume(payload);
       setResult(tailored);
+      setCheckedChunkIds(
+        tailored.suggestions
+          .filter(({ action }) => action !== "keep")
+          .map(({ chunkId }) => chunkId),
+      );
+      setResumeUsedForTailor(resumeForThisRun);
+      setIsResultStale(false);
     } catch (tailorError) {
       setError(
         tailorError instanceof Error
@@ -160,7 +280,8 @@ export function ResumeTailorPanel({
       {result ? (
         <div className="space-y-8">
           <section
-            className="space-y-5 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+            ref={resultsOverviewRef}
+            className="scroll-mt-4 space-y-5 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
             aria-label="Tailoring overview"
           >
             <div>
@@ -236,10 +357,45 @@ export function ResumeTailorPanel({
                   <TailorSuggestionCard
                     key={suggestion.chunkId}
                     suggestion={suggestion}
+                    onCheckboxChange={handleCheckboxChange}
+                    checked={checkedChunkIds.includes(suggestion.chunkId)}
                   />
                 ))}
               </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p className="text-sm text-gray-600">
+                  {checkedChunkIds.length} suggestion
+                  {checkedChunkIds.length === 1 ? "" : "s"} selected
+                </p>
+                <button
+                  type="button"
+                  onClick={handleApply}
+                  disabled={checkedChunkIds.length === 0}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Apply selected
+                </button>
+              </div>
             </section>
+          )}
+
+          {applyResult && (
+            <div ref={previewRef} className="scroll-mt-4">
+              <TailoredResumePreview
+                tailoredResumeText={applyResult.tailoredResumeText}
+                appliedCount={applyResult.appliedChunkIds.length}
+                failedChunkIds={applyResult.failedChunkIds}
+                onTextChange={(tailoredResumeText) =>
+                  setApplyResult((previous) =>
+                    previous ? { ...previous, tailoredResumeText } : previous,
+                  )
+                }
+                onUseForCoverLetter={() =>
+                  handleUseForCoverLetter(applyResult.tailoredResumeText)
+                }
+              />
+            </div>
           )}
         </div>
       ) : (

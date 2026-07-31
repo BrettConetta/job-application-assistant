@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
     "build": "npm run build --prefix frontend",
-    "build:backend": "npm run build --prefix backend"
+    "build:backend": "npm run build --prefix backend",
+    "test": "./backend/node_modules/.bin/tsx --test 'lib/**/*.test.ts'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
