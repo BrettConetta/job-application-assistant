@@ -2,12 +2,12 @@
 
 A full-stack TypeScript app that helps you apply from a job description and your resume. It generates tailored cover letters with Claude, and can also suggest resume edits via a local RAG pipeline (chunk → embed → retrieve → rewrite suggestions).
 
-Paste or upload a resume, add a job posting, and get a cover letter you can copy into Word or download as `.docx` or PDF. Use the resume tailor API to get before/after suggestions you can copy into your own template (contact icons and layout stay in your real resume file).
+Paste or upload a resume, add a job posting, and get a cover letter you can copy into Word or download as `.docx` or PDF. Use Resume Tailor to get before/after suggestions, apply the ones you want into a preview, then send that tailored text to Cover Letter — or copy suggestions into your own template (contact icons and layout stay in your real resume file).
 
 ## Features
 
 - **Tailored cover letters** — Claude analyzes the job description and resume to write a focused, human-sounding letter grounded in your actual experience.
-- **Resume tailoring (RAG)** — Resume sections are chunked and embedded locally with Ollama; the most relevant chunks for a JD are retrieved, then Claude returns before/after rewrite suggestions.
+- **Resume tailoring (RAG)** — Resume sections are chunked and embedded locally with Ollama; the most relevant chunks for a JD are retrieved, then Claude returns before/after rewrite suggestions. Select suggestions, apply them into an editable preview, and optionally use that text to generate a cover letter.
 - **Master resume storage** — Save a full inventory of experience under **My Resume**; retrieval selects what matters per job instead of sending every bullet every time.
 - **Multiple resume inputs** — Paste text, upload a file (TXT, MD, DOCX, or PDF), or reuse the saved master resume.
 - **Automatic contact header** — Name, location, email, and phone are parsed from your resume header and added to the formatted cover letter.
@@ -134,7 +134,15 @@ If any required contact fields are missing, the letter still generates but a war
 
 ### Resume tailoring (RAG)
 
-Treat the saved resume as a **master resume**: a complete inventory of roles, projects, and skills. Tailoring does not rebuild your designed Word/PDF template (icons, contact layout, etc.). It returns **suggestions** you review and paste yourself.
+Treat the saved resume as a **master resume**: a complete inventory of roles, projects, and skills. Tailoring does not rebuild your designed Word/PDF template (icons, contact layout, etc.). It returns **suggestions** you review in the UI.
+
+In the app you can:
+
+1. **Select** the suggestions you want (checkboxes).
+2. **Apply selected** — merge those rewrites into the resume text used for that tailor run (by chunk id), shown in an editable preview. This does not overwrite **My Resume**.
+3. **Use for cover letter** — switches to the Cover Letter tab with that tailored text in **Paste** (not the master resume), ready to generate.
+
+You can still copy individual suggestions into your own template if you prefer.
 
 Pipeline:
 

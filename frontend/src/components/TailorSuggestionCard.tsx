@@ -18,10 +18,14 @@ function formatSection(section: string): string {
 
 type TailorSuggestionCardProps = {
   suggestion: TailoredResumeSuggestion;
+  onCheckboxChange: (chunkId: string) => void;
+  checked: boolean;
 };
 
 export function TailorSuggestionCard({
   suggestion,
+  onCheckboxChange,
+  checked,
 }: TailorSuggestionCardProps) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">(
     "idle",
@@ -43,6 +47,16 @@ export function TailorSuggestionCard({
     <article className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+              onChange={() => onCheckboxChange(suggestion.chunkId)}
+              checked={checked}
+              aria-label={`Select ${formatSection(suggestion.section)} suggestion`}
+              disabled={suggestion.action === "keep"}
+            />
+          </div>
           <span className="text-sm font-semibold text-gray-900">
             {formatSection(suggestion.section)}
           </span>

@@ -1,7 +1,7 @@
 import type { ProjectContext } from "../schemas/tailoredResume.js";
 
-const NAME_AND_YEAR_LINE = /^(.*)\s(\d{4})$/;
-const PROJECT_TYPE_AND_TECH_STACK_LINE = /^(.+?)\s•\s(.+)$/;
+export const NAME_AND_YEAR_LINE = /^(.*)\s(\d{4})$/;
+export const PROJECT_TYPE_AND_TECH_STACK_LINE = /^(.+?)\s•\s(.+)$/;
 
 export function parseProjectChunk(text: string): ProjectContext {
   const empty = { name: "", year: "", projectType: "", techStack: "" };
