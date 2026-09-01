@@ -16,7 +16,7 @@ export async function retrieveResumeChunks(
   options: RetrieveResumeChunksOptions = {},
 ): Promise<ResumeChunk[]> {
   const {
-    maxChunks = 6,
+    maxChunks = 24,
     ensureSections = ["summary", "skills"],
     ensureLatestExperience = true,
     minScore = 0,
@@ -55,9 +55,12 @@ export async function retrieveResumeChunks(
     }
   }
   if (ensureLatestExperience) {
-    const latest = similarityScores.find((s) => s.chunk.id === "experience-0");
-    if (latest) {
-      tryAdd(latest.chunk);
+    const latestExperience = similarityScores
+      .filter((s) => s.chunk.parentId === "experience-0")
+      .sort((a, b) => b.similarity - a.similarity);
+
+    for (const score of latestExperience) {
+      tryAdd(score.chunk);
     }
   }
 
@@ -65,6 +68,7 @@ export async function retrieveResumeChunks(
   for (const score of similarityScores) {
     if (selected.length >= maxChunks) break;
     if (score.similarity < minScore) continue;
+    if (score.chunk.section === "education") continue;
     if (selectedIds.has(score.chunk.id)) continue;
     tryAdd(score.chunk);
   }

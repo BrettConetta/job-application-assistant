@@ -36,3 +36,11 @@ export function parseExperienceChunk(text: string): ExperienceContext {
 
   return { company, location, title, dates };
 }
+
+export function formatExperienceContext(context: ExperienceContext): string {
+  const companyLine = [context.company, context.location]
+    .filter(Boolean)
+    .join(" • ");
+  const roleLine = [context.title, context.dates].filter(Boolean).join(" ");
+  return [companyLine, roleLine].filter(Boolean).join("\n");
+}

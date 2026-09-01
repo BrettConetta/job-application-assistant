@@ -2,6 +2,8 @@ import fs from "node:fs";
 import { ResumeChunk } from "../schemas/resumeChunk.js";
 import { ResumeIndex, ResumeIndexSchema } from "../schemas/resumeIndex.js";
 import { chunkResume } from "../utils/chunkResume.js";
+import { formatExperienceContext } from "../utils/parseExperienceChunk.js";
+import { formatProjectContext } from "../utils/parseProjectChunk.js";
 import { getResumeIndexPath, readResumeFile } from "../utils/resumeFiles.js";
 import { embedText } from "./embedText.js";
 
@@ -69,7 +71,12 @@ function chunksMatchCache(chunks: ResumeChunk[], cached: ResumeIndex): boolean {
   if (chunks.length !== cached.length) return false;
   return chunks.every(
     (chunk, i) =>
-      chunk.id === cached[i]!.chunk.id && chunk.text === cached[i]!.chunk.text,
+      chunk.id === cached[i]!.chunk.id &&
+      chunk.text === cached[i]!.chunk.text &&
+      JSON.stringify(chunk.experienceContext) ===
+        JSON.stringify(cached[i]!.chunk.experienceContext) &&
+      JSON.stringify(chunk.projectContext) ===
+        JSON.stringify(cached[i]!.chunk.projectContext),
   );
 }
 
@@ -108,9 +115,15 @@ async function embedChunks(chunks: ResumeChunk[]): Promise<ResumeIndex> {
   }[] = [];
 
   for (const chunk of chunks) {
+    const contextText = chunk.experienceContext
+      ? formatExperienceContext(chunk.experienceContext)
+      : chunk.projectContext
+        ? formatProjectContext(chunk.projectContext)
+        : "";
+    const textToEmbed = [contextText, chunk.text].filter(Boolean).join("\n");
     chunkEmbeddings.push({
       chunk,
-      embedding: await embedText(chunk.text),
+      embedding: await embedText(textToEmbed),
     });
   }
 

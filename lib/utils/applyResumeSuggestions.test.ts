@@ -59,7 +59,7 @@ describe("applyResumeSuggestionsToChunks", () => {
     assert.equal(summary?.text, "Rewritten summary tailored to the role.");
   });
 
-  it("keeps experience headers and replaces only the bullet body", () => {
+  it("keeps experience headers in experienceContext and replaces only the bullet body", () => {
     const { updatedChunks, appliedChunkIds, failedChunkIds } =
       applyResumeSuggestionsToChunks(SAMPLE_RESUME, [
         makeSuggestion({
@@ -75,16 +75,24 @@ describe("applyResumeSuggestionsToChunks", () => {
 
     const experience0 = updatedChunks.find((c) => c.id === "experience-0");
     assert.ok(experience0);
-    assert.match(experience0.text, /^ICIMS • Holmdel, NJ\n/);
-    assert.match(
+    assert.deepEqual(experience0.experienceContext, {
+      company: "ICIMS",
+      location: "Holmdel, NJ",
+      title: "Software Engineer",
+      dates: "October 2022 – December 2025",
+    });
+    assert.equal(
       experience0.text,
-      /Software Engineer October 2022 – December 2025\n/,
+      "• Architected scalable Java services\n• Mentored engineers on delivery",
     );
-    assert.match(experience0.text, /• Architected scalable Java services/);
-    assert.doesNotMatch(experience0.text, /• Built Java microservices/);
+    assert.doesNotMatch(experience0.text, /ICIMS • Holmdel, NJ/);
+    assert.doesNotMatch(
+      experience0.text,
+      /Software Engineer October 2022 – December 2025/,
+    );
   });
 
-  it("keeps project headers and replaces only the bullet body", () => {
+  it("keeps project headers in projectContext and replaces only the bullet body", () => {
     const { updatedChunks, appliedChunkIds, failedChunkIds } =
       applyResumeSuggestionsToChunks(SAMPLE_RESUME, [
         makeSuggestion({
@@ -100,10 +108,21 @@ describe("applyResumeSuggestionsToChunks", () => {
 
     const project = updatedChunks.find((c) => c.id === "projects-0");
     assert.ok(project);
-    assert.match(project.text, /Job Application Assistant 2026/);
-    assert.match(project.text, /Personal Project • TypeScript, React, Express/);
-    assert.match(project.text, /• Built a full-stack TypeScript app/);
-    assert.doesNotMatch(project.text, /• Built Java microservices/);
+    assert.deepEqual(project.projectContext, {
+      name: "Job Application Assistant",
+      year: "2026",
+      projectType: "Personal Project",
+      techStack: "TypeScript, React, Express",
+    });
+    assert.equal(
+      project.text,
+      "• Built a full-stack TypeScript app\n• Integrated LLM APIs",
+    );
+    assert.doesNotMatch(project.text, /Job Application Assistant 2026/);
+    assert.doesNotMatch(
+      project.text,
+      /Personal Project • TypeScript, React, Express/,
+    );
   });
 
   it("applies by chunkId when project and experience share the same bullet text", () => {
@@ -144,7 +163,7 @@ describe("applyResumeSuggestionsToChunks", () => {
     assert.deepEqual(updatedChunks, before);
   });
 
-  it("fails experience suggestions whose matched chunk lacks company/role headers", () => {
+  it("fails experience suggestions whose matched chunk lacks experienceContext", () => {
     const { appliedChunkIds, failedChunkIds, updatedChunks } =
       applyResumeSuggestionsToChunks(SAMPLE_RESUME, [
         makeSuggestion({
@@ -206,22 +225,46 @@ describe("assembleResumeBodyFromChunks", () => {
       {
         id: "experience-0",
         section: "experience",
-        text: "ICIMS • Holmdel, NJ\nSoftware Engineer October 2022 – December 2025\n• Bullet A",
+        text: "• Bullet A",
+        experienceContext: {
+          company: "ICIMS",
+          location: "Holmdel, NJ",
+          title: "Software Engineer",
+          dates: "October 2022 – December 2025",
+        },
       },
       {
         id: "experience-1",
         section: "experience",
-        text: "ICIMS • Holmdel, NJ\nAssociate Software Engineer April 2021 – October 2022\n• Bullet B",
+        text: "• Bullet B",
+        experienceContext: {
+          company: "ICIMS",
+          location: "Holmdel, NJ",
+          title: "Associate Software Engineer",
+          dates: "April 2021 – October 2022",
+        },
       },
       {
         id: "projects-0",
         section: "projects",
-        text: "Project One 2026\nPersonal Project • TypeScript\n• Project bullet A",
+        text: "• Project bullet A",
+        projectContext: {
+          name: "Project One",
+          year: "2026",
+          projectType: "Personal Project",
+          techStack: "TypeScript",
+        },
       },
       {
         id: "projects-1",
         section: "projects",
-        text: "Project Two 2025\nPersonal Project • React\n• Project bullet B",
+        text: "• Project bullet B",
+        projectContext: {
+          name: "Project Two",
+          year: "2025",
+          projectType: "Personal Project",
+          techStack: "React",
+        },
       },
     ]);
 
@@ -301,5 +344,42 @@ describe("applyResumeSuggestions", () => {
       result.tailoredResumeText,
       /Experience[\s\S]*• Built Java microservices/,
     );
+  });
+});
+
+describe("chunkResume experience context", () => {
+  it("keeps the prior company on a second role until a new company line", () => {
+    const resume = `Experience
+ICIMS • Holmdel, NJ
+Software Engineer October 2022 – December 2025
+• Built Java microservices
+Associate Software Engineer April 2021 – October 2022
+• Led React knowledge sharing
+Life Skills Software, Inc • Red Bank, NJ
+Full Stack Developer May 2020 – June 2021
+• Built a classroom app
+`;
+    const chunks = chunkResume(resume);
+    const experience = chunks.filter((c) => c.section === "experience");
+
+    assert.equal(experience.length, 3);
+    assert.deepEqual(experience[0]?.experienceContext, {
+      company: "ICIMS",
+      location: "Holmdel, NJ",
+      title: "Software Engineer",
+      dates: "October 2022 – December 2025",
+    });
+    assert.deepEqual(experience[1]?.experienceContext, {
+      company: "ICIMS",
+      location: "Holmdel, NJ",
+      title: "Associate Software Engineer",
+      dates: "April 2021 – October 2022",
+    });
+    assert.deepEqual(experience[2]?.experienceContext, {
+      company: "Life Skills Software, Inc",
+      location: "Red Bank, NJ",
+      title: "Full Stack Developer",
+      dates: "May 2020 – June 2021",
+    });
   });
 });

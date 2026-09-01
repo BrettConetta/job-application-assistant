@@ -1,4 +1,4 @@
-import type { ProjectContext } from "../schemas/tailoredResume.js";
+import type { ProjectContext } from "../schemas/resumeChunk.js";
 
 export const NAME_AND_YEAR_LINE = /^(.*)\s(\d{4})$/;
 export const PROJECT_TYPE_AND_TECH_STACK_LINE = /^(.+?)\s•\s(.+)$/;
@@ -32,12 +32,20 @@ export function parseProjectChunk(text: string): ProjectContext {
   let projectType = "";
   let techStack = "";
   if (projectTypeAndTechStackLine) {
-    const [projType, tStack] = projectTypeAndTechStackLine.split(
+    const match = projectTypeAndTechStackLine.match(
       PROJECT_TYPE_AND_TECH_STACK_LINE,
     );
-    projectType = projType?.trim() ?? "";
-    techStack = tStack?.trim() ?? "";
+    projectType = match?.[1]?.trim() ?? "";
+    techStack = match?.[2]?.trim() ?? "";
   }
 
   return { name, year, projectType, techStack };
+}
+
+export function formatProjectContext(context: ProjectContext): string {
+  const nameYear = [context.name, context.year].filter(Boolean).join(" ");
+  const typeStack = [context.projectType, context.techStack]
+    .filter(Boolean)
+    .join(" • ");
+  return [nameYear, typeStack].filter(Boolean).join("\n");
 }

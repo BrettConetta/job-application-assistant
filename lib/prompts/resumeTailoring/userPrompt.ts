@@ -8,6 +8,8 @@ export function buildTailorResumeUserPrompt(input: TailorResumeInput): string {
       id: chunk.id,
       section: chunk.section,
       text: chunk.text,
+      experienceContext: chunk.experienceContext,
+      projectContext: chunk.projectContext,
     })),
     null,
     2,

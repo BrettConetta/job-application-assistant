@@ -54,6 +54,7 @@ Action values:
 - "rewrite": meaningful rephrasing and/or restructuring of wording for stronger JD alignment, while remaining fully grounded in the chunk
 - "emphasize": light touch — reorder or highlight existing points; wording mostly the same
 - "keep": no useful change; suggestedText identical to originalText
+- "drop": remove the chunk from the resume
 
 keywordsToMirror:
 - Array of job-description keywords/phrases that are already evidenced by the provided chunks
@@ -86,7 +87,7 @@ The JSON must have exactly these keys:
 - suggestions (array of objects), each with exactly:
   - chunkId (string)
   - section (string)
-  - action ("rewrite" | "keep" | "emphasize")
+  - action ("rewrite" | "keep" | "emphasize" | "drop")
   - originalText (string)
     - for experience, bullet/body lines only (omit company/location/title/dates headers)
     - for projects, bullet/body lines only (omit project name, project type, tech stack, and year headers)

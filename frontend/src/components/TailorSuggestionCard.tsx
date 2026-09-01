@@ -10,6 +10,7 @@ const ACTION_STYLES: Record<TailoredResumeSuggestion["action"], string> = {
   rewrite: "bg-amber-50 text-amber-800 ring-amber-200",
   emphasize: "bg-indigo-50 text-indigo-800 ring-indigo-200",
   keep: "bg-gray-100 text-gray-700 ring-gray-200",
+  drop: "bg-red-50 text-red-800 ring-red-200",
 };
 
 function formatSection(section: string): string {

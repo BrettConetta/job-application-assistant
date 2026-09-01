@@ -11,8 +11,6 @@ import {
 } from "../schemas/tailoredResume.js";
 import { getAnthropicClient } from "../utils/anthropicClient.js";
 import { parseClaudeResponse } from "../utils/parseAnthropicResponse.js";
-import { parseExperienceChunk } from "../utils/parseExperienceChunk.js";
-import { parseProjectChunk } from "../utils/parseProjectChunk.js";
 import { retrieveResumeChunks } from "./retrieveResumeChunks.js";
 
 export async function tailorResume(
@@ -60,9 +58,7 @@ export async function tailorResume(
             (chunk) => chunk.id === suggestion.chunkId,
           );
           if (relevantChunk) {
-            suggestion.experienceContext = parseExperienceChunk(
-              relevantChunk.text,
-            );
+            suggestion.experienceContext = relevantChunk.experienceContext;
           }
         }
         if (suggestion.section === "projects") {
@@ -70,7 +66,7 @@ export async function tailorResume(
             (chunk) => chunk.id === suggestion.chunkId,
           );
           if (relevantChunk) {
-            suggestion.projectContext = parseProjectChunk(relevantChunk.text);
+            suggestion.projectContext = relevantChunk.projectContext;
           }
         }
       });
