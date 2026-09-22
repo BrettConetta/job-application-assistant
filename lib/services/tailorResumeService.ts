@@ -23,7 +23,7 @@ export async function tailorResume(
 
   const baseRequest = {
     model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6",
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: TAILOR_RESUME_SYSTEM_PROMPT,
   } as const;
 
