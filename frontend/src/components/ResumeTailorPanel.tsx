@@ -81,7 +81,13 @@ export function ResumeTailorPanel({
       setIsResultStale(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally ignore `result`
-  }, [jobDescription, resumeSource, pastedResume, uploadedResume, storedResume]);
+  }, [
+    jobDescription,
+    resumeSource,
+    pastedResume,
+    uploadedResume,
+    storedResume,
+  ]);
 
   useEffect(() => {
     onResultStaleChange(isResultStale);
@@ -130,7 +136,11 @@ export function ResumeTailorPanel({
     }
 
     setApplyResult(
-      applyResumeSuggestions(resumeUsedForTailor, checkedSuggestions),
+      applyResumeSuggestions(
+        resumeUsedForTailor,
+        result!.suggestions,
+        checkedSuggestions,
+      ),
     );
   }
 

@@ -7,6 +7,7 @@ import { formatProjectContext } from "./parseProjectChunk.js";
 export function applyResumeSuggestionsToChunks(
   originalResumeText: string,
   suggestions: TailoredResumeSuggestion[],
+  checkedSuggestions: TailoredResumeSuggestion[],
 ): {
   updatedChunks: ResumeChunk[];
   appliedChunkIds: string[];
@@ -15,7 +16,7 @@ export function applyResumeSuggestionsToChunks(
   let updatedChunks = chunkResume(originalResumeText);
   const failedChunkIds: string[] = [];
   const appliedChunkIds: string[] = [];
-  for (const suggestion of suggestions) {
+  for (const suggestion of checkedSuggestions) {
     if (suggestion.action === "drop") {
       updatedChunks = updatedChunks.filter(
         (chunk) => chunk.id !== suggestion.chunkId,
@@ -23,6 +24,10 @@ export function applyResumeSuggestionsToChunks(
       appliedChunkIds.push(suggestion.chunkId);
       continue;
     }
+    if (suggestion.action === "keep") {
+      continue;
+    }
+
     const index = updatedChunks.findIndex(
       (chunk) => chunk.id === suggestion.chunkId,
     );
@@ -65,6 +70,21 @@ export function applyResumeSuggestionsToChunks(
       appliedChunkIds.push(suggestion.chunkId);
     }
   }
+  const allowedIds = new Set(suggestions.map((s) => s.chunkId));
+  updatedChunks = updatedChunks.filter((chunk) => {
+    if (
+      chunk.section === "education" ||
+      chunk.section === "summary" ||
+      chunk.section === "skills"
+    ) {
+      return true;
+    }
+    if (chunk.section === "experience" || chunk.section === "projects") {
+      return allowedIds.has(chunk.id);
+    }
+    return true;
+  });
+
   return {
     updatedChunks,
     appliedChunkIds,
@@ -115,9 +135,14 @@ export function assembleResumeBodyFromChunks(chunks: ResumeChunk[]): string {
 export function applyResumeSuggestions(
   originalResumeText: string,
   suggestions: TailoredResumeSuggestion[],
+  checkedSuggestions: TailoredResumeSuggestion[],
 ) {
   const { updatedChunks, appliedChunkIds, failedChunkIds } =
-    applyResumeSuggestionsToChunks(originalResumeText, suggestions);
+    applyResumeSuggestionsToChunks(
+      originalResumeText,
+      suggestions,
+      checkedSuggestions,
+    );
 
   const tailoredResumeText = assembleResumeBodyFromChunks(updatedChunks);
 
