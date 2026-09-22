@@ -1,21 +1,9 @@
 import { z } from "zod";
-import { ResumeChunkSchema } from "./resumeChunk.js";
-
-export const ExperienceContextSchema = z.object({
-  company: z.string().trim(),
-  location: z.string().trim(),
-  title: z.string().trim(),
-  dates: z.string().trim(),
-});
-export type ExperienceContext = z.infer<typeof ExperienceContextSchema>;
-
-export const ProjectContextSchema = z.object({
-  name: z.string().trim(),
-  year: z.string().trim(),
-  projectType: z.string().trim(),
-  techStack: z.string().trim(),
-});
-export type ProjectContext = z.infer<typeof ProjectContextSchema>;
+import {
+  ExperienceContextSchema,
+  ProjectContextSchema,
+  ResumeChunkSchema,
+} from "./resumeChunk.js";
 
 export const TailoredResumeRequestSchema = z.object({
   jobDescription: z.string().trim().min(1, "jobDescription is required"),
@@ -27,7 +15,7 @@ export type TailoredResumeRequest = z.infer<typeof TailoredResumeRequestSchema>;
 export const TailoredResumeSuggestionSchema = z.object({
   chunkId: z.string().trim().min(1, "chunkId is required"), // must match a retrieved chunk id
   section: ResumeChunkSchema.shape.section,
-  action: z.enum(["rewrite", "keep", "emphasize"] as const),
+  action: z.enum(["rewrite", "keep", "emphasize", "drop"] as const),
   originalText: z.string().trim().min(1, "originalText is required"), // echo of chunk text (or subset)
   suggestedText: z.string().trim().min(1, "suggestedText is required"), // tailored version; same as original if keep
   rationale: z.string().trim().min(1, "rationale is required"), // short: why this change for this JD

@@ -1,5 +1,7 @@
 import type { ResumeChunk } from "../schemas/resumeChunk.js";
 import { normalizeResumeLineBreaks } from "./normalizeResumeText.js";
+import { parseExperienceChunk } from "./parseExperienceChunk.js";
+import { parseProjectChunk } from "./parseProjectChunk.js";
 
 const SECTION_ALIASES: Record<string, string> = {
   summary: "summary",
@@ -35,7 +37,7 @@ export function chunkResume(resume: string): ResumeChunk[] {
       return chunkExperienceIntoRoles(section);
     }
     if (section.section === "projects") {
-      return chunkResumeSectionIntoEntries(section, PROJECT_LINE, true);
+      return chunkProjectsSectionIntoEntries(section, PROJECT_LINE, true);
     }
     return section;
   });
@@ -88,7 +90,7 @@ export function chunkResumeIntoSections(resume: string): ResumeChunk[] {
   return sections;
 }
 
-export function chunkResumeSectionIntoEntries(
+export function chunkProjectsSectionIntoEntries(
   section: ResumeChunk,
   newEntryRegex: RegExp,
   prependPreviousLine: boolean = false,
@@ -96,6 +98,7 @@ export function chunkResumeSectionIntoEntries(
   const entries: ResumeChunk[] = [];
   const sectionLines = section.text.split("\n");
 
+  let titleLine: string | null = null;
   let entryText: string[] = [];
   let entryHeader: string | null = null;
   let previousLine: string | null = null;
@@ -107,23 +110,16 @@ export function chunkResumeSectionIntoEntries(
       id: `${section.section}-${iteration++}`,
       section: section.section,
       text: entryText.join("\n"),
+      projectContext: parseProjectChunk(
+        [titleLine, entryHeader].filter(Boolean).join("\n"),
+      ),
     });
     entryText = [];
+    titleLine = null;
   };
 
   for (const line of sectionLines) {
     if (isHeader(line, newEntryRegex)) {
-      // pull next title off the current entry (if it was already pushed)
-      if (
-        prependPreviousLine &&
-        previousLine?.trim() &&
-        !previousLine.trim().startsWith("•") &&
-        entryText.length > 0 &&
-        entryText[entryText.length - 1] === previousLine
-      ) {
-        entryText.pop();
-      }
-
       // push the current entry to the entries array
       flush();
       entryHeader = line.trim();
@@ -134,15 +130,12 @@ export function chunkResumeSectionIntoEntries(
         previousLine?.trim() &&
         !previousLine.trim().startsWith("•")
       ) {
-        entryText.push(previousLine);
+        titleLine = previousLine;
       }
-
-      // add the current line to the entryText
-      entryText.push(line);
     } else if (entryHeader === null) {
       // waiting for first entry header — title may sit here for projects
-    } else {
-      // add the current line to the entryText
+    } else if (line.trim().startsWith("•")) {
+      // add the current line to the entryText if it is a bullet
       entryText.push(line);
     }
 
@@ -153,7 +146,20 @@ export function chunkResumeSectionIntoEntries(
   // push the last sectionHeader and sectionText into sections
   flush();
 
-  return entries;
+  return entries.flatMap((entry) => chunkProjectIntoBullets(entry));
+}
+
+export function chunkProjectIntoBullets(project: ResumeChunk): ResumeChunk[] {
+  return project.text
+    .split("\n")
+    .filter((line) => line.trim().startsWith("•"))
+    .map((line, index) => ({
+      id: `${project.id}-${index}`,
+      parentId: project.id,
+      section: project.section,
+      text: line.trim(),
+      projectContext: project.projectContext,
+    }));
 }
 
 export function chunkExperienceIntoRoles(section: ResumeChunk): ResumeChunk[] {
@@ -161,6 +167,7 @@ export function chunkExperienceIntoRoles(section: ResumeChunk): ResumeChunk[] {
   const sectionLines = section.text.split("\n");
 
   let currentCompanyLine: string | null = null;
+  let currentRoleLine: string | null = null;
   let entryText: string[] = [];
   let inRole = false;
   let iteration = 0;
@@ -171,6 +178,9 @@ export function chunkExperienceIntoRoles(section: ResumeChunk): ResumeChunk[] {
       id: `${section.section}-${iteration++}`,
       section: section.section,
       text: entryText.join("\n"),
+      experienceContext: parseExperienceChunk(
+        [currentCompanyLine, currentRoleLine].filter(Boolean).join("\n"),
+      ),
     });
     entryText = [];
     inRole = false;
@@ -180,6 +190,7 @@ export function chunkExperienceIntoRoles(section: ResumeChunk): ResumeChunk[] {
     const trimmed = line.trim();
 
     if (isHeader(line, COMPANY_LINE)) {
+      flush();
       currentCompanyLine = trimmed;
       continue;
     }
@@ -187,19 +198,29 @@ export function chunkExperienceIntoRoles(section: ResumeChunk): ResumeChunk[] {
     if (isHeader(line, ROLE_DATE_LINE)) {
       flush();
       inRole = true;
-      if (currentCompanyLine) {
-        entryText.push(currentCompanyLine);
-      }
-      entryText.push(line);
+      currentRoleLine = trimmed;
       continue;
     }
 
-    if (inRole) {
+    if (inRole && trimmed.startsWith("•")) {
       entryText.push(line);
     }
     // else: stray lines before the first role — ignore
   }
 
   flush();
-  return roles;
+  return roles.flatMap((role) => chunkRoleIntoBullets(role));
+}
+
+export function chunkRoleIntoBullets(role: ResumeChunk): ResumeChunk[] {
+  return role.text
+    .split("\n")
+    .filter((line) => line.trim().startsWith("•"))
+    .map((line, index) => ({
+      id: `${role.id}-${index}`,
+      parentId: role.id,
+      section: role.section,
+      text: line.trim(),
+      experienceContext: role.experienceContext,
+    }));
 }

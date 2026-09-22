@@ -1,25 +1,33 @@
 import type { ResumeChunk } from "../schemas/resumeChunk.js";
 import type { TailoredResumeSuggestion } from "../schemas/tailoredResume.js";
 import { chunkResume } from "./chunkResume.js";
-import { COMPANY_SEP, ROLE_DATES } from "./parseExperienceChunk.js";
-import {
-  NAME_AND_YEAR_LINE,
-  PROJECT_TYPE_AND_TECH_STACK_LINE,
-} from "./parseProjectChunk.js";
+import { formatExperienceContext } from "./parseExperienceChunk.js";
+import { formatProjectContext } from "./parseProjectChunk.js";
 
 export function applyResumeSuggestionsToChunks(
   originalResumeText: string,
   suggestions: TailoredResumeSuggestion[],
+  checkedSuggestions: TailoredResumeSuggestion[],
 ): {
   updatedChunks: ResumeChunk[];
   appliedChunkIds: string[];
   failedChunkIds: string[];
 } {
-  const chunks = chunkResume(originalResumeText);
-  const updatedChunks = [...chunks];
+  let updatedChunks = chunkResume(originalResumeText);
   const failedChunkIds: string[] = [];
   const appliedChunkIds: string[] = [];
-  for (const suggestion of suggestions) {
+  for (const suggestion of checkedSuggestions) {
+    if (suggestion.action === "drop") {
+      updatedChunks = updatedChunks.filter(
+        (chunk) => chunk.id !== suggestion.chunkId,
+      );
+      appliedChunkIds.push(suggestion.chunkId);
+      continue;
+    }
+    if (suggestion.action === "keep") {
+      continue;
+    }
+
     const index = updatedChunks.findIndex(
       (chunk) => chunk.id === suggestion.chunkId,
     );
@@ -27,60 +35,29 @@ export function applyResumeSuggestionsToChunks(
       failedChunkIds.push(suggestion.chunkId);
       continue;
     }
-    const chunk = chunks[index];
+    const chunk = updatedChunks[index];
     let updatedChunk: ResumeChunk = chunk;
     if (suggestion.section === "experience") {
-      const lines = chunk.text
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean);
-
-      const companyLine = lines.find(
-        (l) => COMPANY_SEP.test(l) && !l.startsWith("•"),
-      );
-      const roleLine = lines.find(
-        (l) => ROLE_DATES.test(l) && !l.startsWith("•"),
-      );
-
-      if (!companyLine || !roleLine) {
+      if (!chunk.experienceContext) {
         failedChunkIds.push(suggestion.chunkId);
         continue;
       }
 
       updatedChunk = {
         ...chunk,
-        text: [companyLine, roleLine, suggestion.suggestedText].join("\n"),
+        text: suggestion.suggestedText,
       };
       updatedChunks[index] = updatedChunk;
       appliedChunkIds.push(suggestion.chunkId);
     } else if (suggestion.section === "projects") {
-      const lines = chunk.text
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean);
-
-      const nameAndYearLine = lines.find(
-        (l) => NAME_AND_YEAR_LINE.test(l) && !l.startsWith("•"),
-      );
-      const projectTypeAndTechStackLine = lines.find(
-        (l) =>
-          PROJECT_TYPE_AND_TECH_STACK_LINE.test(l) &&
-          !l.startsWith("•") &&
-          l.includes("•"),
-      );
-
-      if (!nameAndYearLine || !projectTypeAndTechStackLine) {
+      if (!chunk.projectContext) {
         failedChunkIds.push(suggestion.chunkId);
         continue;
       }
 
       updatedChunk = {
         ...chunk,
-        text: [
-          nameAndYearLine,
-          projectTypeAndTechStackLine,
-          suggestion.suggestedText,
-        ].join("\n"),
+        text: suggestion.suggestedText,
       };
       updatedChunks[index] = updatedChunk;
       appliedChunkIds.push(suggestion.chunkId);
@@ -93,6 +70,21 @@ export function applyResumeSuggestionsToChunks(
       appliedChunkIds.push(suggestion.chunkId);
     }
   }
+  const allowedIds = new Set(suggestions.map((s) => s.chunkId));
+  updatedChunks = updatedChunks.filter((chunk) => {
+    if (
+      chunk.section === "education" ||
+      chunk.section === "summary" ||
+      chunk.section === "skills"
+    ) {
+      return true;
+    }
+    if (chunk.section === "experience" || chunk.section === "projects") {
+      return allowedIds.has(chunk.id);
+    }
+    return true;
+  });
+
   return {
     updatedChunks,
     appliedChunkIds,
@@ -103,21 +95,39 @@ export function applyResumeSuggestionsToChunks(
 export function assembleResumeBodyFromChunks(chunks: ResumeChunk[]): string {
   let body = "";
   let previousSection: string | null = null;
+  let previousParentId: string | undefined;
   for (const chunk of chunks) {
+    const isEntrySection =
+      chunk.section === "experience" || chunk.section === "projects";
+    const entryChanged = isEntrySection && chunk.parentId !== previousParentId;
     if (chunk.section !== previousSection) {
-      if (body) {
-        body += "\n";
-      }
+      if (body) body += "\n";
       body +=
         chunk.section.charAt(0).toUpperCase() + chunk.section.slice(1) + "\n";
       previousSection = chunk.section;
-    } else if (
-      chunk.section === "experience" ||
-      chunk.section === "projects"
-    ) {
+      previousParentId = undefined; // force header on first entry in section
+    } else if (entryChanged) {
       body += "\n";
     }
-    body += chunk.text + "\n";
+    const shouldEmitEntryHeader =
+      isEntrySection && chunk.parentId !== previousParentId;
+    let chunkBody = chunk.text;
+    if (shouldEmitEntryHeader) {
+      if (chunk.section === "experience" && chunk.experienceContext) {
+        chunkBody = [
+          formatExperienceContext(chunk.experienceContext),
+          chunk.text,
+        ]
+          .filter(Boolean)
+          .join("\n");
+      } else if (chunk.section === "projects" && chunk.projectContext) {
+        chunkBody = [formatProjectContext(chunk.projectContext), chunk.text]
+          .filter(Boolean)
+          .join("\n");
+      }
+    }
+    body += chunkBody + "\n";
+    previousParentId = chunk.parentId;
   }
   return body.trimEnd();
 }
@@ -125,9 +135,14 @@ export function assembleResumeBodyFromChunks(chunks: ResumeChunk[]): string {
 export function applyResumeSuggestions(
   originalResumeText: string,
   suggestions: TailoredResumeSuggestion[],
+  checkedSuggestions: TailoredResumeSuggestion[],
 ) {
   const { updatedChunks, appliedChunkIds, failedChunkIds } =
-    applyResumeSuggestionsToChunks(originalResumeText, suggestions);
+    applyResumeSuggestionsToChunks(
+      originalResumeText,
+      suggestions,
+      checkedSuggestions,
+    );
 
   const tailoredResumeText = assembleResumeBodyFromChunks(updatedChunks);
 

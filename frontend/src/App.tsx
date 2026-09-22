@@ -167,7 +167,6 @@ function App() {
             </div>
           </div>
         )}
-        <br />
       </header>
 
       <main

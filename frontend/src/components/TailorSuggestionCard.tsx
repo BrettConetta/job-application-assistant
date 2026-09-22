@@ -10,6 +10,7 @@ const ACTION_STYLES: Record<TailoredResumeSuggestion["action"], string> = {
   rewrite: "bg-amber-50 text-amber-800 ring-amber-200",
   emphasize: "bg-indigo-50 text-indigo-800 ring-indigo-200",
   keep: "bg-gray-100 text-gray-700 ring-gray-200",
+  drop: "bg-red-50 text-red-800 ring-red-200",
 };
 
 function formatSection(section: string): string {
@@ -41,10 +42,16 @@ export function TailorSuggestionCard({
     }
   }
 
-  const showDiff = suggestion.action !== "keep";
+  const isDrop = suggestion.action === "drop";
+  const isKeep = suggestion.action === "keep";
+  const showDiff = !isKeep && !isDrop;
 
   return (
-    <article className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <article
+      className={`space-y-4 rounded-xl border bg-white p-5 shadow-sm ${
+        isDrop ? "border-red-200" : "border-gray-200"
+      }`}
+    >
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -54,7 +61,7 @@ export function TailorSuggestionCard({
               onChange={() => onCheckboxChange(suggestion.chunkId)}
               checked={checked}
               aria-label={`Select ${formatSection(suggestion.section)} suggestion`}
-              disabled={suggestion.action === "keep"}
+              disabled={isKeep}
             />
           </div>
           <span className="text-sm font-semibold text-gray-900">
@@ -119,7 +126,13 @@ export function TailorSuggestionCard({
           <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
             Original
           </h3>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
+          <div
+            className={`rounded-lg border p-3 text-sm leading-relaxed whitespace-pre-wrap ${
+              isDrop
+                ? "border-red-200 bg-red-50 text-red-900 line-through decoration-red-400"
+                : "border-gray-200 bg-gray-50 text-gray-800"
+            }`}
+          >
             {showDiff
               ? renderOriginalDiff(
                   suggestion.originalText,
@@ -131,19 +144,27 @@ export function TailorSuggestionCard({
 
         <div className="min-w-0 space-y-1.5">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Suggested
+            {isDrop ? "Result" : "Suggested"}
           </h3>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
-            {showDiff
-              ? renderSuggestedDiff(
-                  suggestion.originalText,
-                  suggestion.suggestedText,
-                )
-              : suggestion.suggestedText}
+          <div
+            className={`rounded-lg border p-3 text-sm leading-relaxed whitespace-pre-wrap ${
+              isDrop
+                ? "border-red-200 bg-red-50 text-red-800 italic"
+                : "border-gray-200 bg-gray-50 text-gray-800"
+            }`}
+          >
+            {isDrop
+              ? "Removed from tailored resume"
+              : showDiff
+                ? renderSuggestedDiff(
+                    suggestion.originalText,
+                    suggestion.suggestedText,
+                  )
+                : suggestion.suggestedText}
           </div>
         </div>
       </div>
-      {suggestion.action !== "keep" && (
+      {!isKeep && !isDrop && (
         <div className="flex flex-wrap items-center justify-end gap-3">
           <button
             type="button"

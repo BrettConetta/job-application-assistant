@@ -11,8 +11,6 @@ import {
 } from "../schemas/tailoredResume.js";
 import { getAnthropicClient } from "../utils/anthropicClient.js";
 import { parseClaudeResponse } from "../utils/parseAnthropicResponse.js";
-import { parseExperienceChunk } from "../utils/parseExperienceChunk.js";
-import { parseProjectChunk } from "../utils/parseProjectChunk.js";
 import { retrieveResumeChunks } from "./retrieveResumeChunks.js";
 
 export async function tailorResume(
@@ -25,7 +23,7 @@ export async function tailorResume(
 
   const baseRequest = {
     model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6",
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: TAILOR_RESUME_SYSTEM_PROMPT,
   } as const;
 
@@ -60,9 +58,7 @@ export async function tailorResume(
             (chunk) => chunk.id === suggestion.chunkId,
           );
           if (relevantChunk) {
-            suggestion.experienceContext = parseExperienceChunk(
-              relevantChunk.text,
-            );
+            suggestion.experienceContext = relevantChunk.experienceContext;
           }
         }
         if (suggestion.section === "projects") {
@@ -70,7 +66,7 @@ export async function tailorResume(
             (chunk) => chunk.id === suggestion.chunkId,
           );
           if (relevantChunk) {
-            suggestion.projectContext = parseProjectChunk(relevantChunk.text);
+            suggestion.projectContext = relevantChunk.projectContext;
           }
         }
       });
